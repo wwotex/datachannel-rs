@@ -31,22 +31,29 @@ fn main() {
         if !cfg!(feature = "media") {
             cmake_conf.define("NO_MEDIA", "ON");
         }
+        
+        if let Ok(openssl_root_dir) = env_var_rerun("OPENSSL_ROOT_DIR") {
+            cmake_conf.define("OPENSSL_ROOT_DIR", openssl_root_dir);
+        }
+        if let Ok(openssl_libraries) = env_var_rerun("OPENSSL_LIBRARIES") {
+            cmake_conf.define("OPENSSL_LIBRARIES", openssl_libraries);
+        }
 
-        let openssl_root_dir = openssl_artifacts().lib_dir().parent().unwrap();
-        cmake_conf.define("OPENSSL_ROOT_DIR", openssl_root_dir.to_path_buf());
-        cmake_conf.define(
-            "OPENSSL_INCLUDE_DIR",
-            openssl_root_dir.to_path_buf().join("include"),
-        );
-        cmake_conf.define(
-            "OPENSSL_CRYPTO_LIBRARY",
-            openssl_root_dir.to_path_buf().join("lib/libcrypto.a"),
-        );
-        cmake_conf.define(
-            "OPENSSL_SSL_LIBRARY",
-            openssl_root_dir.to_path_buf().join("lib/libssl.a"),
-        );
-        cmake_conf.define("OPENSSL_USE_STATIC_LIBS", "TRUE");
+        // let openssl_root_dir = openssl_artifacts().lib_dir().parent().unwrap();
+        // cmake_conf.define("OPENSSL_ROOT_DIR", openssl_root_dir.to_path_buf());
+        // cmake_conf.define(
+        //     "OPENSSL_INCLUDE_DIR",
+        //     openssl_root_dir.to_path_buf().join("include"),
+        // );
+        // cmake_conf.define(
+        //     "OPENSSL_CRYPTO_LIBRARY",
+        //     openssl_root_dir.to_path_buf().join("lib/libcrypto.a"),
+        // );
+        // cmake_conf.define(
+        //     "OPENSSL_SSL_LIBRARY",
+        //     openssl_root_dir.to_path_buf().join("lib/libssl.a"),
+        // );
+        // cmake_conf.define("OPENSSL_USE_STATIC_LIBS", "TRUE");
 
         cmake_conf.build();
 
@@ -57,18 +64,25 @@ fn main() {
             .include(format!("{}/lib", out_dir))
             .build("src/lib.rs");
 
-        // Link static openssl
-        println!(
-            "cargo:rustc-link-search=native={}",
-            openssl_artifacts().lib_dir().to_path_buf().display()
-        );
-        if cfg!(target_env = "msvc") {
-            println!("cargo:rustc-link-lib=static=libcrypto");
-            println!("cargo:rustc-link-lib=static=libssl");
-        } else {
-            println!("cargo:rustc-link-lib=static=crypto");
-            println!("cargo:rustc-link-lib=static=ssl");
-        }
+        // // Link static openssl
+        // println!(
+        //     "cargo:rustc-link-search=native={}",
+        //     openssl_artifacts().lib_dir().to_path_buf().display()
+        // );
+        // if cfg!(target_env = "msvc") {
+        //     println!("cargo:rustc-link-lib=static=libcrypto");
+        //     println!("cargo:rustc-link-lib=static=libssl");
+        // } else {
+        //     println!("cargo:rustc-link-lib=static=crypto");
+        //     println!("cargo:rustc-link-lib=static=ssl");
+        // }
+
+        // Link dynamic openssl
+        println!("cargo:rustc-link-search=native={}/lib", out_dir);
+        println!("cargo:rustc-link-lib=dylib=crypto");
+        
+        println!("cargo:rustc-link-search=native={}/lib", out_dir);
+        println!("cargo:rustc-link-lib=dylib=ssl");
 
         // Link static libjuice
         if cfg!(target_env = "msvc") {
